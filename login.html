@@ -102,37 +102,50 @@
     </div>
 
     <script>
-        const BASE_URL = "https://java-backend-production-d7c2.up.railway.app";
+    const BASE_URL = "https://java-backend-production-d7c2.up.railway.app";
 
-        function togglePass() {
-            const pass = document.getElementById("password");
-            pass.type = pass.type === "password" ? "text" : "password";
+    function togglePass() {
+        const pass = document.getElementById("password");
+        pass.type = pass.type === "password" ? "text" : "password";
+    }
+
+    async function login() {
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value.trim();
+
+        if (!email || !password) {
+            document.getElementById("msg").innerText = "All fields required";
+            return;
         }
 
-        function login() {
-            const email = document.getElementById("email").value;
-            const password = document.getElementById("password").value;
-
-            fetch(`${BASE_URL}/api/login`, {
+        try {
+            const res = await fetch(`${BASE_URL}/api/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password })
-            })
-                .then(res => res.text())
-                .then(data => {
-                    if (data !== "fail") {
-                        localStorage.setItem("token", data);
-                        const payload = JSON.parse(atob(data.split('.')[1]));
-                        if (payload.role === "ADMIN") {
-                            window.location = "admin.html";
-                        }
-                    } else {
-                        document.getElementById("msg").innerText = "Invalid login";
-                    }
-                })
-                .catch(() => alert("Server not responding"));
+            });
+
+            if (!res.ok) {
+                throw new Error("Invalid login");
+            }
+
+            const token = await res.text();
+
+            localStorage.setItem("token", token);
+
+            const payload = JSON.parse(atob(token.split('.')[1]));
+
+            if (payload.role === "ADMIN") {
+                window.location = "admin.html";
+            } else {
+                document.getElementById("msg").innerText = "Not authorized";
+            }
+
+        } catch (err) {
+            document.getElementById("msg").innerText = "Invalid login";
         }
-    </script>
+    }
+</script>
 
 </body>
 
