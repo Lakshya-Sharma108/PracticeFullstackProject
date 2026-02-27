@@ -263,201 +263,111 @@
     <div class="toast" id="toast"></div>
 
     <script>
-        const BASE_URL = "https://java-backend-production-d7c2.up.railway.app";
+    const BASE_URL = "https://java-backend-production-d7c2.up.railway.app";
 
-        let token = localStorage.getItem("token");
-        if (!token) location = "login.html";
+    let students = [];
 
-        let students = [];
-        let currentEditId = null;
+    function showToast(msg) {
+        const toast = document.getElementById("toast");
+        toast.innerText = msg;
+        toast.style.display = "block";
+        setTimeout(() => toast.style.display = "none", 2000);
+    }
 
+    async function loadStudents() {
+        try {
+            const res = await fetch(`${BASE_URL}/api/students`);
+            if (!res.ok) throw new Error();
 
-        function showToast(msg) {
-            const toast = document.getElementById("toast");
-            toast.innerText = msg;
-            toast.style.display = "block";
-            setTimeout(() => toast.style.display = "none", 2000);
+            students = await res.json();
+            renderTable(students);
+
+            document.getElementById("totalStudents").innerText = students.length;
+
+        } catch (err) {
+            console.error("Load error:", err);
         }
+    }
 
-        async function loadStudents() {
-            try {
-                const res = await fetch(`${BASE_URL}/api/students`);
+    function renderTable(data) {
+        const table = document.getElementById("studentTable");
+        table.innerHTML = "";
 
-                if (!res.ok) {
-                    throw new Error("Server error " + res.status);
-                }
+        data.forEach(s => {
+            table.innerHTML += `
+                <tr>
+                    <td>${s.id}</td>
+                    <td>${s.name}</td>
+                    <td>${s.email}</td>
+                    <td>
+                        <button class="editBtn" onclick="editStudent(${s.id},'${s.name}','${s.email}')">Edit</button>
+                        <button class="deleteBtn" onclick="deleteStudent(${s.id})">Delete</button>
+                    </td>
+                </tr>`;
+        });
+    }
 
-                const data = await res.json();   // get JSON
-                console.log("Students:", data);
+    async function addStudent() {
+        const name = document.getElementById("name").value.trim();
+        const email = document.getElementById("email").value.trim();
 
-                const table = document.getElementById("studentTable");
-                table.innerHTML = "";
+        if (!name || !email) return;
 
-                document.getElementById("totalStudents").innerText = data.length;
+        await fetch(`${BASE_URL}/api/register`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, email })
+        });
 
-                data.forEach(s => {
-                    table.innerHTML += `
-            <tr>
-                <td>${s.id}</td>
-                <td>${s.name}</td>
-                <td>${s.email}</td>
-                <td>
-                    <button class="editBtn" onclick="editStudent(${s.id},'${s.name}','${s.email}')">Edit</button>
-                    <button class="deleteBtn" onclick="deleteStudent(${s.id})">Delete</button>
-                </td>
-            </tr>`;
-                });
-
-            } catch (err) {
-                console.error("Load error:", err);
-            }
-        }
-
-        function renderTable(data) {
-            let html = "";
-            data.forEach(s => {
-                html += `
-        <tr>
-            <td>${s.id}</td>
-            <td>${s.name}</td>
-            <td>${s.email}</td>
-            <td>
-                <button class="editbtn" onclick="openEdit(${s.id},'${s.name}','${s.email}')">Edit</button>
-                <button class="delbtn" onclick="deleteStudent(${s.id})">Delete</button>
-            </td>
-        </tr>`;
-            });
-            document.getElementById("table").innerHTML = html;
-        }
-
-        function addStudent() {
-            const name = document.getElementById("name").value;
-            const email = document.getElementById("email").value;
-
-            fetch(`${BASE_URL}/api/students`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": "Bearer " + token
-                },
-                body: JSON.stringify({ name, email })
-            })
-                .then(() => { loadStudents(); showToast("Student Added"); });
-        }
-
-        async function deleteStudent(id) {
-
-            if (!confirm("Delete this student?")) return;
-
-            try {
-                const res = await fetch(`${BASE_URL}/api/delete/${id}`, {
-                    method: "DELETE",
-                    headers: {
-                        "Authorization": "Bearer " + token
-                    }
-                });
-
-                if (res.ok) {
-                    alert("Deleted successfully");
-                    loadStudents();
-                } else {
-                    alert("Delete failed");
-                }
-
-            } catch (err) {
-                console.error(err);
-                alert("Server error");
-            }
-        }
-
-        async function editStudent(id, oldName, oldEmail) {
-
-            const name = prompt("Enter new name", oldName);
-            const email = prompt("Enter new email", oldEmail);
-
-            if (!name || !email) return;
-
-            try {
-                const res = await fetch(`${BASE_URL}/api/update/${id}`, {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        name: name,
-                        email: email
-                    })
-                });
-
-                if (res.ok) {
-                    alert("Updated successfully");
-                    loadStudents();
-                } else {
-                    alert("Update failed");
-                }
-
-            } catch (err) {
-                console.error(err);
-                alert("Server error");
-            }
-        }
-
-        function closeModal() {
-            document.getElementById("editModal").style.display = "none";
-        }
-
-        function updateStudent() {
-            const name = document.getElementById("editName").value;
-            const email = document.getElementById("editEmail").value;
-
-            fetch(`${BASE_URL}/api/students` + currentEditId, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": "Bearer " + token
-                },
-                body: JSON.stringify({ name, email })
-            })
-                .then(() => {
-                    closeModal();
-                    loadStudents();
-                    showToast("Student Updated");
-                });
-        }
-
-        function searchStudent() {
-            const value = document.getElementById("search").value.toLowerCase();
-            const filtered = students.filter(s => s.name.toLowerCase().includes(value));
-            renderTable(filtered);
-        }
-
-        function logout() {
-            localStorage.removeItem("token");
-            location = "login.html";
-        }
-
-        function downloadExcel() {
-            const token = localStorage.getItem("token");
-
-            fetch(`${BASE_URL}/api/students`, {
-                headers: {
-                    "Authorization": "Bearer " + token
-                }
-            })
-                .then(res => res.blob())
-                .then(blob => {
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement("a");
-                    a.href = url;
-                    a.download = "students.xlsx";
-                    a.click();
-                })
-                .catch(() => alert("Excel download failed"));
-        }
-
+        document.getElementById("name").value = "";
+        document.getElementById("email").value = "";
 
         loadStudents();
-    </script>
+        showToast("Student Added");
+    }
+
+    async function deleteStudent(id) {
+        if (!confirm("Delete this student?")) return;
+
+        await fetch(`${BASE_URL}/api/delete/${id}`, {
+            method: "DELETE"
+        });
+
+        loadStudents();
+        showToast("Deleted");
+    }
+
+    async function editStudent(id, oldName, oldEmail) {
+        const name = prompt("Enter new name", oldName);
+        const email = prompt("Enter new email", oldEmail);
+
+        if (!name || !email) return;
+
+        await fetch(`${BASE_URL}/api/update/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, email })
+        });
+
+        loadStudents();
+        showToast("Updated");
+    }
+
+    function searchStudent() {
+        const value = document.getElementById("search").value.toLowerCase();
+        const filtered = students.filter(s =>
+            s.name.toLowerCase().includes(value) ||
+            s.email.toLowerCase().includes(value)
+        );
+        renderTable(filtered);
+    }
+
+    function downloadExcel() {
+        window.location.href = `${BASE_URL}/api/export`;
+    }
+
+    loadStudents();
+</script>
 
 </body>
 
