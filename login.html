@@ -102,6 +102,8 @@
     </div>
 
     <script>
+        const BASE_URL = "https://java-backend-production-d7c2.up.railway.app";
+
         function togglePass() {
             const pass = document.getElementById("password");
             pass.type = pass.type === "password" ? "text" : "password";
@@ -111,7 +113,7 @@
             const email = document.getElementById("email").value;
             const password = document.getElementById("password").value;
 
-            fetch("http://localhost:8080/login", {
+            fetch(`${BASE_URL}/api/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email, password })
